@@ -1,0 +1,49 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files (never commit)
+.env
+.env.local
+.env.production
+
+# Android build artifacts
+android/app/build/
+android/build/
+android/.gradle/
+android/keystores/
+android/app/keystore.properties
+*.apk
+*.aab
+
+# iOS build artifacts
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
+ios/App/App/public/
+ios/.gradle/
+*.ipa
+*.xcarchive
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
