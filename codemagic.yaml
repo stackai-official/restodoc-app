@@ -1,0 +1,71 @@
+# Codemagic CI/CD config for RestoDoc iOS App Store builds.
+# This file lives at the repo root (restodoc-app). Scripts run from here directly —
+# no `cd` needed since the repo root is the project root.
+#
+# Before the first run, configure in Codemagic UI:
+#
+#   1. App Store Connect integration named `codemagic`
+#      Settings → Integrations → App Store Connect → upload your API key (.p8).
+#      Codemagic uses this for code signing, provisioning, and TestFlight upload.
+#
+#   2. Environment variable group named `restodoc_secrets` with these encrypted vars:
+#        - VITE_SUPABASE_URL
+#        - VITE_SUPABASE_ANON_KEY
+#        - ANTHROPIC_API_KEY
+#      (vite reads VITE_* at build time and bakes them into the bundle)
+#
+#   3. App record in App Store Connect with bundle ID com.restodoc.app
+#
+# Apple Developer credentials are NOT supplied as env vars — Codemagic's
+# integrations.app_store_connect block handles certificate, provisioning profile,
+# and notarization automatically through the App Store Connect API key.
+
+workflows:
+  ios-app-store:
+    name: RestoDoc iOS App Store
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.restodoc.app
+      groups:
+        - restodoc_secrets
+      vars:
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.restodoc.app"
+      node: 18
+      xcode: latest
+    cache:
+      cache_paths:
+        - $HOME/.npm
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Build web assets and sync iOS
+        script: |
+          npm run build
+          npx cap sync ios
+      - name: Set build number from latest TestFlight build
+        script: |
+          cd ios/App
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$BUNDLE_ID" 2>/dev/null || echo "0")
+          NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          agvtool new-version -all $NEW_BUILD_NUMBER
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
