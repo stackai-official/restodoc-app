@@ -4,9 +4,9 @@
 #
 # Before the first run, configure in Codemagic UI:
 #
-#   1. App Store Connect integration named `codemagic`
-#      Settings → Integrations → App Store Connect → upload your API key (.p8).
-#      Codemagic uses this for code signing, provisioning, and TestFlight upload.
+#   1. Developer Portal integration named `codemagic`
+#      Settings → Integrations → Developer Portal → upload your .p8 key.
+#      Codemagic uses this to auto-create certificates and provisioning profiles.
 #
 #   2. Environment variable group named `restodoc_secrets` with these encrypted vars:
 #        - VITE_SUPABASE_URL
@@ -15,10 +15,11 @@
 #      (vite reads VITE_* at build time and bakes them into the bundle)
 #
 #   3. App record in App Store Connect with bundle ID com.restodoc.app
+#      registered under Apple Developer Team ID 9H6296HU23.
 #
-# Apple Developer credentials are NOT supplied as env vars — Codemagic's
-# integrations.app_store_connect block handles certificate, provisioning profile,
-# and notarization automatically through the App Store Connect API key.
+# Apple Developer credentials are NOT supplied as env vars — the Developer
+# Portal integration handles certificate and provisioning profile creation
+# automatically through the uploaded API key.
 
 workflows:
   ios-app-store:
@@ -26,7 +27,7 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     integrations:
-      app_store_connect: codemagic
+      developer_portal: codemagic
     environment:
       ios_signing:
         distribution_type: app_store
@@ -37,6 +38,7 @@ workflows:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.restodoc.app"
+        APPLE_TEAM_ID: "9H6296HU23"
       node: 18
       xcode: latest
     cache:
@@ -50,10 +52,10 @@ workflows:
           npm run build
           npx cap sync ios
       - name: Set up provisioning profiles
-        # ios_signing + integrations.app_store_connect tells Codemagic to
+        # ios_signing + integrations.developer_portal tells Codemagic to
         # auto-fetch (or auto-create) the certificate and provisioning profile
-        # via the App Store Connect API key. This step then patches the Xcode
-        # project so the build actually uses them.
+        # via the uploaded .p8 key. This step then patches the Xcode project
+        # so the build actually uses them.
         script: |
           xcode-project use-profiles
       - name: Set build number from latest TestFlight build
