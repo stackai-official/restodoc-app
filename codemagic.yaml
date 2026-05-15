@@ -32,6 +32,8 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.restodoc.app
+        certificate: restodoc_distribution
+        provisioning_profile: RestoDoc_App_Store
       groups:
         - restodoc_secrets
       vars:
@@ -51,13 +53,6 @@ workflows:
         script: |
           npm run build
           npx cap sync ios
-      - name: Set up provisioning profiles
-        # ios_signing + integrations.app_store_connect tells Codemagic to
-        # auto-fetch (or auto-create) the certificate and provisioning profile
-        # via the uploaded .p8 key. This step then patches the Xcode project
-        # so the build actually uses them.
-        script: |
-          xcode-project use-profiles
       - name: Set build number from latest TestFlight build
         script: |
           cd ios/App
