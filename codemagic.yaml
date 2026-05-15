@@ -18,7 +18,7 @@ workflows:
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.restodoc.app"
         APPLE_TEAM_ID: "9H6296HU23"
-      node: 18
+      node: 22
       xcode: latest
     scripts:
       - name: Install npm dependencies
