@@ -30,7 +30,7 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          @codemagic-certs fetch-certificates --type=distribution
+          keychain add-certificates
           xcode-project use-profiles
       - name: Build IPA
         script: |
