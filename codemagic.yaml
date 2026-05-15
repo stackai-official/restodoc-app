@@ -1,39 +1,16 @@
 # Codemagic CI/CD config for RestoDoc iOS App Store builds.
-# This file lives at the repo root (restodoc-app). Scripts run from here directly —
-# no `cd` needed since the repo root is the project root.
-#
-# Before the first run, configure in Codemagic UI:
-#
-#   1. Developer Portal integration named `codemagic`
-#      Settings → Integrations → Developer Portal → upload your .p8 key.
-#      Codemagic uses this to auto-create certificates and provisioning profiles.
-#
-#   2. Environment variable group named `restodoc_secrets` with these encrypted vars:
-#        - VITE_SUPABASE_URL
-#        - VITE_SUPABASE_ANON_KEY
-#        - ANTHROPIC_API_KEY
-#      (vite reads VITE_* at build time and bakes them into the bundle)
-#
-#   3. App record in App Store Connect with bundle ID com.restodoc.app
-#      registered under Apple Developer Team ID 9H6296HU23.
-#
-# Apple Developer credentials are NOT supplied as env vars — the Developer
-# Portal integration handles certificate and provisioning profile creation
-# automatically through the uploaded API key.
+# Manual code signing using the certificate and provisioning profile
+# uploaded directly in the Codemagic UI under Code signing identities.
 
 workflows:
   ios-app-store:
     name: RestoDoc iOS App Store
     instance_type: mac_mini_m2
     max_build_duration: 60
-    integrations:
-      app_store_connect: codemagic
     environment:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.restodoc.app
-        certificate: restodoc_distribution
-        provisioning_profile: RestoDoc_App_Store
       groups:
         - restodoc_secrets
       vars:
@@ -43,9 +20,6 @@ workflows:
         APPLE_TEAM_ID: "9H6296HU23"
       node: 18
       xcode: latest
-    cache:
-      cache_paths:
-        - $HOME/.npm
     scripts:
       - name: Install npm dependencies
         script: npm ci
@@ -53,12 +27,11 @@ workflows:
         script: |
           npm run build
           npx cap sync ios
-      - name: Set build number from latest TestFlight build
+      - name: Set up code signing
         script: |
-          cd ios/App
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$BUNDLE_ID" 2>/dev/null || echo "0")
-          NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
-          agvtool new-version -all $NEW_BUILD_NUMBER
+          keychain initialize
+          @codemagic-certs fetch-certificates --type=distribution
+          xcode-project use-profiles
       - name: Build IPA
         script: |
           xcode-project build-ipa \
@@ -67,5 +40,3 @@ workflows:
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
