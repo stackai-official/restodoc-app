@@ -49,6 +49,13 @@ workflows:
         script: |
           npm run build
           npx cap sync ios
+      - name: Set up provisioning profiles
+        # ios_signing + integrations.app_store_connect tells Codemagic to
+        # auto-fetch (or auto-create) the certificate and provisioning profile
+        # via the App Store Connect API key. This step then patches the Xcode
+        # project so the build actually uses them.
+        script: |
+          xcode-project use-profiles
       - name: Set build number from latest TestFlight build
         script: |
           cd ios/App
