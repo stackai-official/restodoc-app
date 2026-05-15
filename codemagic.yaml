@@ -1,12 +1,15 @@
 # Codemagic CI/CD config for RestoDoc iOS App Store builds.
 # Manual code signing using the certificate and provisioning profile
 # uploaded directly in the Codemagic UI under Code signing identities.
+# TestFlight upload via the App Store Connect integration named "codemagic".
 
 workflows:
   ios-app-store:
     name: RestoDoc iOS App Store
     instance_type: mac_mini_m2
     max_build_duration: 60
+    integrations:
+      app_store_connect: codemagic
     environment:
       ios_signing:
         distribution_type: app_store
@@ -36,7 +39,15 @@ workflows:
         script: |
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags "DEVELOPMENT_TEAM=$APPLE_TEAM_ID"
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
+      - ios/App/build/ios/xcarchive/*.xcarchive
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
       - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
